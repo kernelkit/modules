@@ -1,0 +1,214 @@
+#!/usr/bin/env python3
+
+import mmap
+import re
+import struct
+
+from collections import namedtuple
+from functools import reduce
+
+class Mem32:
+    WORD_SHIFT = 2
+
+    def Open(mempath: str, offs:int=0, size:int=(64 << 10)):
+        mf = open(mempath, "r+b")
+        mem = mmap.mmap(mf.fileno(), length=size, offset=offs)
+        return Mem32(mem)
+
+    def __init__(self, mem: mmap.mmap):
+        self._mem = mem
+
+    def read(self, reg: int, nr_words: int) -> list[int]:
+        offs = reg << 2
+        size = nr_words << 2
+        data = self._mem[offs:offs+size]
+        return list(struct.unpack_from(f"<{nr_words}I", data))
+
+    def write(self, reg: int, nr_words: int, words: list[int]) -> None:
+        offs = reg << 2
+        size = nr_words << 2
+        data = struct.pack(f"<{nr_words}I", *words)
+        self._mem[offs:offs+size] = data
+
+class ABI:
+    RegionFmt = re.compile(r"^(\w+)(?:\[(\d+)\])?(?:\.(\w+))?$")
+
+    def extract(fspec, entry):
+        start, width = fspec["Start bit"], fspec["Width"]
+        return (entry >> start) & ((1 << width) - 1)
+
+    def inject(fspec, entry, value):
+        start, width = fspec["Start bit"], fspec["Width"]
+        mask = ((1 << width) - 1) << start
+        return (entry & ~mask) | (value << start)
+
+    class Region:
+        def __init__(self, spec: dict, name: str, index: int, field: str):
+            self._spec, self._name, self._index = spec, name, index
+
+            self.stride = self._spec["Address step"]
+            self.len = self._spec["Number of entries"]
+
+            self.reg = self._spec["Start address"]
+            if self._index:
+                self.reg += self._index * self.stride
+
+            self.nr_words = self.stride
+            if self._index is None:
+                self.nr_words *= self.len
+
+            self._fspec = self.fspec(field) if field else None
+
+        def fspec(self, name):
+            for fspec in self._spec["Fields"]:
+                if fspec["Name"] == name:
+                    return fspec
+            else:
+                raise ValueError(f"Unknown field \"{name}\" in {self._name}")
+
+        def entrify(self, data):
+            chunks = [reversed(data[i:i + self.stride]) for i in range(0, len(data), self.stride)]
+            return [reduce(lambda acc, x: (acc << 32)|x, chunk) for chunk in chunks]
+
+        def linearize(self, entry):
+            return [(entry >> i * 32) & 0xffffffff for i in range(self.stride)]
+
+        def format(self, f, data):
+            entries = self.entrify(data)
+
+            if len(entries) == 1 and self._fspec:
+                f.write(f"{ABI.extract(self._fspec, entries[0]):#x}\n")
+                return
+
+            for i in range(len(entries)):
+                if self._fspec:
+                    f.write(f"{self._name}[{i:02d}].{self._fspec['Name']}: " +
+                            f"{ABI.extract(self._fspec, entries[i]):#8x}\n")
+                else:
+                    f.write(f"{self._name}[{i:02d}]:\n")
+                    for fspec in self._spec["Fields"]:
+                        f.write(f"  {fspec['Name']:<30s} {ABI.extract(fspec, entries[i]):#8x}\n")
+
+        def update(self, data, value):
+            entry = ABI.inject(self._fspec, self.entrify(data)[0], value)
+            return self.linearize(entry)
+
+
+    def __init__(self, spec: dict):
+        self._regs = {
+            name.lower().replace(":", "").replace(" - ", " ").replace(" ", "_"): data
+            for name, data in sorted(spec["conf bus 0"].items())
+        }
+
+    def region_by_name(self, s: str):
+        m = ABI.RegionFmt.match(s)
+        if not m:
+            return None
+
+        spec = self._regs.get(m.group(1))
+        if not spec:
+            return None
+
+        idx = None if m.group(2) is None else int(m.group(2))
+        return ABI.Region(spec, m.group(1), idx, m.group(3))
+
+def fdb_dump(abi, dev):
+    def addrfmt(num):
+        o = [(num >> (i * 8)) & 0xff for i in range(6)]
+        return f"{o[5]:02x}:{o[4]:02x}:{o[3]:02x}:{o[2]:02x}:{o[1]:02x}:{o[0]:02x}"
+
+    def dstfmt(uc, dst):
+        return f"port{dst}" if uc else f"group{dst}"
+
+    def textract(t, mem, i, f):
+        entry = t.entrify(mem[i*t.stride:(i+1)*t.stride])[0]
+        return ABI.extract(f, entry)
+
+    l2as = abi.region_by_name("l2_aging_status_shadow_table")
+    l2asr = abi.region_by_name("l2_aging_status_shadow_table_replica")
+    l2a = abi.region_by_name("l2_aging_table")
+    l2h = abi.region_by_name("l2_da_hash_lookup_table")
+
+    l2cas = abi.region_by_name("l2_aging_collision_shadow_table")
+    l2ca = abi.region_by_name("l2_aging_collision_table")
+    l2c = abi.region_by_name("l2_lookup_collision_table")
+
+    l2d = abi.region_by_name("l2_destination_table")
+    l2d_uc = l2d.fspec("uc")
+    l2d_dst = l2d.fspec("destPort_or_mcAddr")
+    l2d_mem = dev.read(l2d.reg, l2d.nr_words)
+
+    print(f"  IDX  V  HASH:B  ST  GID  {'ADDR':<17}  DESTINATION")
+    dsti=-1
+    for (aging_stat, aging_stat_repl, aging, addr) in ((l2as, l2asr, l2a, l2h), (l2cas, None, l2ca, l2c)):
+        ags_valid = aging_stat.fspec("valid")
+        agsr_valid = aging_stat_repl.fspec("valid") if aging_stat_repl else None
+        ag_status = aging.fspec("status")
+        a_macaddr = addr.fspec("macAddr")
+        a_gid = addr.fspec("gid")
+
+        ags_mem = dev.read(aging_stat.reg, aging_stat.nr_words)
+        agsr_mem = dev.read(aging_stat_repl.reg, aging_stat_repl.nr_words) if aging_stat_repl else None
+        ag_mem = dev.read(aging.reg, aging.nr_words)
+        a_mem = dev.read(addr.reg, addr.nr_words)
+
+        for i in range(addr.len):
+            dsti += 1
+            valid = textract(aging_stat, ags_mem, i, ags_valid)
+            rvalid = textract(aging_stat_repl, agsr_mem, i, agsr_valid) if aging_stat_repl else valid
+            match valid, rvalid:
+                case 1, 1:
+                    valid="y"
+                case 1, 0:
+                    valid="!R"
+                case 0, 1:
+                    valid="!S"
+                case 0, 0:
+                    continue
+
+            stat  = textract(aging, ag_mem, i, ag_status)
+            maddr = textract(addr, a_mem, i, a_macaddr)
+            gid   = textract(addr, a_mem, i, a_gid)
+
+            uc    = textract(l2d, l2d_mem, dsti, l2d_uc)
+            dst   = textract(l2d, l2d_mem, dsti, l2d_dst)
+
+            if aging_stat_repl:
+                hash = f"0x{i&0x3f:02x}:{i >> 6}"
+            else:
+                hash = f"!C0x{i:02x}"
+
+            print(f"0x{dsti:03x}  {valid}  {hash}  {stat:>2}  {gid:>3}  {addrfmt(maddr)}  {dstfmt(uc, dst):<11}")
+
+if __name__ == "__main__":
+    import os
+    import sys
+    import yaml
+
+    dev = Mem32.Open(os.environ.get("PASW_DEV", "/dev/mem"),
+                     int(os.environ.get("PASW_OFFSET", "0"), 0))
+    abi = ABI(yaml.load(open(os.environ.get("PASW_SPEC", "/etc/pasw-regs.yml")).read(),
+              yaml.SafeLoader))
+
+    match sys.argv[1:]:
+        case ["reg", reg]:
+            if not (region := abi.region_by_name(reg)):
+                print(f"Unknown region \"{reg}\"")
+                sys.exit(1)
+
+            data = dev.read(region.reg, region.nr_words)
+            region.format(sys.stdout, data)
+        case ["reg", reg, val]:
+            if not (region := abi.region_by_name(reg)):
+                print(f"Unknown region \"{sys.argv[1]}\"")
+                sys.exit(1)
+
+            data = dev.read(region.reg, region.nr_words)
+            data = region.update(data, int(val, 0))
+            dev.write(region.reg, region.nr_words, data)
+        case ["fdb"]:
+            fdb_dump(abi, dev)
+        case _:
+            print(f"Unknown command \"{' '.join(sys.argv[1:])}\"")
+            sys.exit(1)
+

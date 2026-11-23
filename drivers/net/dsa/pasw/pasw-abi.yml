@@ -1,0 +1,189 @@
+attributes:
+  design_name:
+    type: "const char *"
+
+  nr_of_l2_gids:
+    src: ["defines", "c_GID"]
+  nr_of_ports:
+  nr_of_queues:
+    src: ["defines", "c_QUEUES"]
+  nr_of_ticks:
+    src: ["tick", "nr_of_ticks"]
+  cpu_port:
+  cpu_port_format:
+    type: "enum pasw_tag_format"
+
+  # Optional
+  nr_of_ptp_ticks:
+    mandatory: false
+    src: ["ptp_tick", "nr_of_ticks"]
+
+variables:
+  l2_aging:
+    src: ["Learning And Aging Enable", "agingEnable"]
+  l2_da_hit:
+    src: ["Learning And Aging Enable", "daHitEnable"]
+  l2_learning:
+    src: ["Learning And Aging Enable", "learningEnable"]
+  tick_div:
+    src: ["Core Tick Configuration", "clkDivider"]
+  tick_step:
+    src: ["Core Tick Configuration", "stepDivider"]
+  ptp_tick_div:
+    src: ["PTP Tick Configuration", "clkDivider"]
+  ptp_tick_step:
+    src: ["PTP Tick Configuration", "stepDivider"]
+  egress_gate_pending:
+    src: ["Egress Transmission Gate Update Status", "pending"]
+    mandatory: false
+  ptp_tick_sel:
+    src: ["PTP Tick Select", "clkSelect"]
+    mandatory: false
+  shaper_capacity:
+    src: ["Queue Shaper Bucket Capacity Configuration", "bucketCapacity"]
+    mandatory: false
+  shaper_threshold:
+    src: ["Queue Shaper Bucket Threshold Configuration", "threshold"]
+    mandatory: false
+  version:
+    src: ["Core Version", "version"]
+
+# Fields can be defined as a bit range of a register field using
+# `slice: [lo, hi]`, which is used to split up the 80-bit timestamps,
+# encoded as {sec[47:0], ns[31:0]}, used by the transmission gates.
+tables:
+  egress_gate_cfg:
+    src: "Egress Transmission Gate Configuration"
+    mandatory: false
+    fields:
+      base_time_ns:
+        src: adminBaseTime
+        slice: [0, 31]
+      base_time_sec:
+        src: adminBaseTime
+        slice: [32, 79]
+      cycle_time_ns:
+        src: adminCycleTime
+        slice: [0, 31]
+      cycle_time_sec:
+        src: adminCycleTime
+        slice: [32, 79]
+      cycle_time_ext_ns:
+        src: adminCycleTimeExtension
+        slice: [0, 31]
+      cycle_time_ext_sec:
+        src: adminCycleTimeExtension
+        slice: [32, 79]
+      list_len:
+        src: adminControlListLength
+      start_addr:
+        src: adminStartAddr
+  egress_gate_en:
+    src: "Egress Transmission Gate Enabled"
+    mandatory: false
+    fields:
+      enabled:
+  egress_gate_list:
+    src: "Egress Transmission Gate List"
+    mandatory: false
+    fields:
+      disable_queue_mask:
+      interval_ns:
+        src: timeInterval
+        slice: [0, 31]
+      interval_sec:
+        src: timeInterval
+        slice: [32, 79]
+  egress_gate_update:
+    src: "Egress Transmission Gate Update"
+    mandatory: false
+    fields:
+      start:
+  ipv4_tos_to_queue:
+    src: "IPv4 TOS Field To Egress Queue Mapping Table"
+    mandatory: false
+    fields:
+      p_queue:
+  ipv6_cos_to_queue:
+    src: "IPv6 Class of Service Field To Egress Queue Mapping Table"
+    mandatory: false
+    fields:
+      p_queue:
+  l2_age_time:
+    src: "Time to Age"
+    fields:
+      age_cnt:
+      tick_cnt:
+  l2_aging:
+    src: "L2 Aging Table"
+    fields:
+      status:
+  l2_aging_stat:
+    src: "L2 Aging Status Shadow Table"
+    fields:
+      valid:
+    replica: "L2 Aging Status Shadow Table - Replica"
+  l2_da_hash:
+    src: "L2 DA Hash Lookup Table"
+    fields:
+      mac_addr:
+      gid:
+  l2_coll_aging:
+    src: "L2 Aging Collision Table"
+    fields:
+      status:
+  l2_coll_aging_stat:
+    src: "L2 Aging Collision Shadow Table"
+    fields:
+      valid:
+  l2_coll:
+    src: "L2 Lookup Collision Table"
+    fields:
+      mac_addr:
+      gid:
+  l2_dst:
+    src: "L2 Destination Table"
+    fields:
+      uc:
+      dst:
+        src: destPort_or_mcAddr
+      pkt_drop:
+    replica: "L2 Destination Table - Replica"
+  shaper_en:
+    src: "Queue Shaper Enable"
+    mandatory: false
+    fields:
+      enable:
+  shaper_rate:
+    src: "Queue Shaper Rate Configuration"
+    mandatory: false
+    fields:
+      avb:
+      ifg_correction:
+      packets_not_bytes:
+      tick:
+      tokens:
+  src_port:
+    src: "Source Port Table"
+    fields:
+      learning_en:
+      vlan_assignment:
+      default_vid:
+      default_pcp:
+      prio_from_l3:
+        mandatory: false
+      spt:
+        mandatory: false
+  vlan:
+    src: "VLAN Table"
+    fields:
+      port_mask:
+        src: vlanPortMask
+      gid:
+      vid:
+  vlan_pcp_to_queue:
+    src: "VLAN PCP To Queue Mapping Table"
+    mandatory: false
+    fields:
+      p_queue:
+

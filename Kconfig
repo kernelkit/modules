@@ -1,0 +1,7 @@
+mainmenu "External Modules"
+
+config MODULES
+	def_bool y
+	option modules
+
+source "drivers/Kconfig"

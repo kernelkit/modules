@@ -1,0 +1,1 @@
+source "drivers/net/ethernet/xdma-net/Kconfig"

@@ -1,0 +1,2 @@
+source "drivers/net/dsa/Kconfig"
+source "drivers/net/ethernet/Kconfig"

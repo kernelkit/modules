@@ -1,0 +1,14 @@
+config NET_ETH_XDMA_NET
+	tristate "XDMA netdevice"
+	depends on m
+	help
+	  Uses an instance of Xilinx's XDMA block to implement a
+	  standard Linux net device. Southbound channels must be
+	  attached to AXI stream interfaces, over which Ethernet
+	  frames are transported.
+
+	  In contrast to the upstream driver for this core
+	  (`drivers/dma/xilinx/xdma.c`), the "Credit Mode" is used to
+	  operate the engine with a ring of descriptors, which is much
+	  more natural to the kernel's networking API since most NICs
+	  operate in this manner.

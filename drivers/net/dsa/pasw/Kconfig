@@ -1,0 +1,7 @@
+config NET_DSA_PASW
+	tristate "Packet Architects FlexSwitch"
+	depends on m
+	help
+	  DSA driver for the FlexSwitch switch core from Packet
+	  Architects.
+
