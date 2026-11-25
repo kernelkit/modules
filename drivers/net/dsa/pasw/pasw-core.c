@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
 #include <linux/etherdevice.h>
 #include <linux/if_bridge.h>
 #include <linux/module.h>

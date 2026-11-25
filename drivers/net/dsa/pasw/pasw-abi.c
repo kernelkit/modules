@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
 #include <linux/bitfield.h>
 
 /* Provide compat definitions of field_{prep,get} for older
