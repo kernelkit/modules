@@ -1076,9 +1076,7 @@ static void __exit saline_exit(void)
 
 module_init(saline_init);
 module_exit(saline_exit);
-/* module_pci_driver(saline_driver); */
 
-MODULE_DEVICE_TABLE(pci, saline_ids);
 MODULE_AUTHOR("Tobias Waldekranz <tobias@waldekranz.com>");
 MODULE_DESCRIPTION("Saline SmartNIC");
 MODULE_LICENSE("GPL");
