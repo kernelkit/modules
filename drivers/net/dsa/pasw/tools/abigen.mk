@@ -12,7 +12,7 @@ define abispec-rules
 abispec_$(1) ?= $(pasw-src)/pasw-abi.yml
 
 always-y += $(1)
-$$(addprefix $$(obj)/,$$(abideps_$(1))): $$(obj)/$(1)
+$$(addprefix $$(obj)/,$$(patsubst %/,%,$$(abideps_$(1)))): $$(obj)/$(1)
 $$(obj)/$(1): $$(abispec_$(1)) $(abigen-cmd) FORCE
 	$$(call if_changed,abispec)
 
@@ -27,7 +27,7 @@ abiregs_$(1) ?= $$(src)/$$(abiname_$(1))-regs.yml
 abiconf_$(1) ?= $$(src)/$$(abiname_$(1))-conf.yml
 
 always-y += $(1)
-$$(addprefix $$(obj)/,$$(abideps_$(1))): $$(obj)/$(1)
+$$(addprefix $$(obj)/,$$(patsubst %/,%,$$(abideps_$(1)))): $$(obj)/$(1)
 $$(obj)/$(1): $$(abispec_$(1)) $$(abiregs_$(1)) $$(abiconf_$(1)) $(abigen-cmd) FORCE
 	$$(call if_changed,abigen,$$(abiname_$(1)))
 
