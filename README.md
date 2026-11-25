@@ -1,62 +1,78 @@
-External Linux Kernel Modules by Kernelkit
-==========================================
+Kernelkit External Kernel Modules
+=================================
 
-This repository contains a set of Linux kernel modules that can be
-built as external modules. The primary consumer is [Infix][infix], but
-this repo does not presuppose that in any way.
-
-Some modules depend on kernel-internal headers, and thus require the
-full kernel sources to build. I.e., your distribution's
-`linux-headers` package is not sufficient.
+Linux kernel drivers maintained by [Kernelkit][kernelkit], built as
+[external modules][kbuild-ext].  The primary consumer is [Infix][infix],
+but nothing here depends on it.
 
 
 Modules
 -------
 
-| Option                  | Module(s)                     | Description                          |
-|-------------------------|-------------------------------|--------------------------------------|
-| `MOD_NET_DSA_PASW`      | `pasw`, `tag_pasw`, `pasw-*`  | DSA driver for Packet Architects' FlexSwitch, see [its README][pasw] |
-| `MOD_NET_ETH_XDMA_NET`  | `xdma-net`                    | Net device on AMD/Xilinx XDMA, see [its README][xdma] |
-| `MOD_PTP_PG210_PTP`     | `pg210-ptp`                   | PHC driver for the AMD/Xilinx PG210 Timer Syncer |
+| Option                  | Module(s)                     | Description                                                       |
+|-------------------------|-------------------------------|-------------------------------------------------------------------|
+| `MOD_NET_DSA_PASW`      | `pasw`, `tag_pasw`, `pasw-*`  | [DSA][dsa] driver for [Packet Architects'][packetarc] FlexSwitch, see [its README][pasw] |
+| `MOD_NET_ETH_XDMA_NET`  | `xdma-net`                    | Net device on the [AMD/Xilinx XDMA][pg195] (PG195), see [its README][xdma] |
+| `MOD_PTP_PG210_PTP`     | `pg210-ptp`                   | [PHC][ptp] driver for the Timer Syncer in [AMD/Xilinx PG210][pg210], see [its README][pg210-ptp] |
 
-`pasw` generates parts of its source at build time, which requires
-Python 3 with PyYAML on the build host.
+
+Requirements
+------------
+
+- A configured and built kernel tree.  Some modules use kernel-internal
+  headers, so your distribution's `linux-headers` package is not enough
+- Python 3 with [PyYAML][pyyaml], for `pasw`, which generates parts of
+  its source at build time
+- `kconfig-mconf` from `kconfig-frontends`, only for `make menuconfig`
 
 
 Building
 --------
 
-Select modules with `make menuconfig` (needs `kconfig-mconf` from
-`kconfig-frontends`), or set the options directly:
+Select modules with `make menuconfig`, enable all of them with `make
+allmodconfig`, or set the options directly:
 
-    make KDIR=/path/to/linux MOD_NET_DSA_PASW=m
+```sh
+make KDIR=/path/to/linux MOD_NET_DSA_PASW=m MOD_PTP_PG210_PTP=m
+make KDIR=/path/to/linux INSTALL_MOD_PATH=/path/to/rootfs install
+```
 
 Nothing is built unless at least one option is set to `m`.
 
-| Variable | Default                               | Purpose                               |
-|----------|---------------------------------------|---------------------------------------|
-| `KDIR`   | `/lib/modules/$(uname -r)/build`      | Configured and built kernel tree      |
-| `MO`     | `.`                                   | Directory holding the module `.config`|
+| Variable | Default                               | Purpose                                |
+|----------|---------------------------------------|----------------------------------------|
+| `KDIR`   | `/lib/modules/$(uname -r)/build`      | Configured and built kernel tree       |
+| `MO`     | `.`                                   | Directory holding the module `.config` |
 
 Cross-compiling works as for any external module: pass `ARCH` and
-`CROSS_COMPILE`. `make install` runs `modules_install`, which honors
+`CROSS_COMPILE`.  `make install` runs `modules_install`, which honors
 `INSTALL_MOD_PATH`.
 
 
 Adding a Module
 ---------------
 
-Place it where it would live in the kernel tree, e.g.
+Place it where it would live in the kernel tree, e.g.,
 `drivers/net/phy/foo/`, with a `Kconfig` and a `Makefile` keyed on
 `MOD_<SYMBOL>`, and hook both into the parent directory's files.
-Symbols are tristate and `depends on m`.
+Symbols are tristate and `depends on m`.  See [CONTRIBUTING](CONTRIBUTING.md)
+for how to submit changes.
 
 
 License
 -------
 
-GPL-2.0, see `COPYING`.
+[GPL-2.0](COPYING)
 
-[infix]: https://github.com/kernelkit/infix
-[pasw]: drivers/net/dsa/pasw/README.md
-[xdma]: drivers/net/ethernet/xdma-net/README.md
+[kernelkit]:  https://github.com/kernelkit
+[kbuild-ext]: https://docs.kernel.org/kbuild/modules.html
+[infix]:      https://github.com/kernelkit/infix
+[dsa]:        https://docs.kernel.org/networking/dsa/dsa.html
+[packetarc]:  https://www.packetarc.com/
+[pg195]:      https://docs.amd.com/r/en-US/pg195-pcie-dma
+[pg210]:      https://docs.amd.com/r/en-US/pg210-25g-ethernet
+[ptp]:        https://docs.kernel.org/driver-api/ptp.html
+[pyyaml]:     https://pyyaml.org/
+[pasw]:       drivers/net/dsa/pasw/README.md
+[xdma]:       drivers/net/ethernet/xdma-net/README.md
+[pg210-ptp]:  drivers/ptp/pg210-ptp/README.md
