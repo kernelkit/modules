@@ -1,5 +1,5 @@
 config NET_ETH_XDMA_NET
-	tristate "XDMA netdevice"
+	tristate "AMD/Xilinx XDMA net device"
 	depends on m
 	help
 	  Uses an instance of Xilinx's XDMA block to implement a
