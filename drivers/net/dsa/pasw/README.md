@@ -1,8 +1,8 @@
 Packet Architects Switch Driver
 ===============================
 
-This repository contains a driver for switches and SmartNICs built
-around cores from Packet Architects' FlexSwitch.
+This directory contains a [DSA][dsa] driver for switches and SmartNICs
+built around [Packet Architects'][packetarc] FlexSwitch cores.
 
 ### Code Generation
 
@@ -11,7 +11,7 @@ FlexSwitch designs. Furthermore, the cores are synthesized in such a
 way that the locations of registers, indeed even offsets of bit fields
 inside of registers, are dynamic.
 
-To accomodate this structure, the driver leverages code generation to
+To accommodate this structure, the driver leverages code generation to
 derive _ABI implementations_ from a design's _register- and
 configuration specification_.
 
@@ -51,11 +51,13 @@ phases to create the required outputs:
    that can be supplied to an instance of the driver to drive that
    particular core.
 
-N. Step 2 can be repeated any number of depending on the number of
-   different designs that the driver needs to support.
+Step 2 is repeated once for each design the driver needs to support.
 
 Since the FlexSwitch does not come with a native MAC implementation,
 nor with any PCI-e interface or DMA engine, it is typically one block
 in a larger device. Device implementations are therefore expected to
 include the ABI implementation (`mycore-abi.c`) as part of building
 the full driver.
+
+[dsa]:       https://docs.kernel.org/networking/dsa/dsa.html
+[packetarc]: https://www.packetarc.com/

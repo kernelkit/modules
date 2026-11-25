@@ -6,6 +6,8 @@ export $(filter MOD_%,$(.VARIABLES))
 
 obj-y := drivers/
 
+.PHONY: all install clean menuconfig allmodconfig
+
 all:
 	$(MAKE) -C $(KDIR) M=$(CURDIR) modules
 
@@ -15,7 +17,10 @@ install: all
 clean:
 	$(MAKE) -C $(KDIR) M=$(CURDIR) clean
 
+KCONFIG_ENV := CONFIG_=MOD_ KCONFIG_CONFIG=$(MODCONF)
+
 menuconfig:
-	CONFIG_=MOD_ \
-	KCONFIG_CONFIG=$(MODCONF) \
-		kconfig-mconf Kconfig
+	$(KCONFIG_ENV) kconfig-mconf Kconfig
+
+allmodconfig:
+	$(KCONFIG_ENV) kconfig-conf --allmodconfig Kconfig

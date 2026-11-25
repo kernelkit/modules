@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+
 #ifndef _PASW_VLAN_H
 #define _PASW_VLAN_H
 

@@ -1,5 +1,5 @@
 config PTP_PG210_PTP
-	tristate "Xilinx PG210 Timer Syncer"
+	tristate "AMD/Xilinx PG210 Timer Syncer"
 	depends on m
 	help
 	  PHC driver for the Timer Syncer block described in AMD's PG210.

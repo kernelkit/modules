@@ -1,11 +1,16 @@
-Xilinx XDMA NIC Driver
-======================
+AMD/Xilinx XDMA NIC Driver
+==========================
 
-Uses an instance of Xilinx's XDMA block to implement a standard Linux
-net device. Southbound channels must be attached to AXI stream
-interfaces, over which Ethernet frames are transported.
+Uses an instance of the [AMD/Xilinx XDMA][pg195] (PG195) block to
+implement a standard Linux net device. Southbound channels must be
+attached to AXI stream interfaces, over which Ethernet frames are
+transported.
 
 In contrast to the upstream driver for this core
-(`drivers/dma/xilinx/xdma.c`), the "Credit Mode" is used to operate
-the engine with a ring of descriptors, which is much more natural to
-the kernel's networking API since most NICs operate in this manner.
+([`drivers/dma/xilinx/xdma.c`][upstream]), the "Credit Mode" is used
+to operate the engine with a ring of descriptors, which is much more
+natural to the kernel's networking API since most NICs operate in this
+manner.
+
+[pg195]:    https://docs.amd.com/r/en-US/pg195-pcie-dma
+[upstream]: https://elixir.bootlin.com/linux/latest/source/drivers/dma/xilinx/xdma.c
